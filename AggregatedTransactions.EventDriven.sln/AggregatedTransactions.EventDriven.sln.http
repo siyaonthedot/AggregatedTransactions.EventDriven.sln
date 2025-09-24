@@ -1,0 +1,6 @@
+@AggregatedTransactions.EventDriven.sln_HostAddress = http://localhost:5196
+
+GET {{AggregatedTransactions.EventDriven.sln_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

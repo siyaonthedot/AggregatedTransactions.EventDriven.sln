@@ -1,0 +1,23 @@
+﻿version: '3.9'
+
+services:
+  banka:
+    build:
+      context: .
+      dockerfile: src/BankA/Dockerfile
+    container_name: banka-service
+    ports:
+      - "5001:8080"   # Expose Swagger on host at http://localhost:5001/swagger
+    environment:
+      - DOTNET_RUNNING_IN_CONTAINER=true
+      - Kafka__BootstrapServers=kafka:9092
+      - Kafka__Topic=transactions
+    depends_on:
+      - kafka
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/swagger/index.html"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    restart: always

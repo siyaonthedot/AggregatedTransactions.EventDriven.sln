@@ -1,0 +1,6 @@
+services:
+  banka.api:
+    image: ${DOCKER_REGISTRY-}bankaapi
+    build:
+      context: .
+      dockerfile: BankA.API/Dockerfile

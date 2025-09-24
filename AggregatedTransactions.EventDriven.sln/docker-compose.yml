@@ -1,0 +1,82 @@
+﻿version: '3.9'
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.1
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports: ["2181:2181"]
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    depends_on: [zookeeper]
+    ports: ["9092:9092"]
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+
+  sql-primary:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=Your_password123
+    ports: ["1433:1433"]
+    volumes:
+      - ./db/scripts:/docker-entrypoint-initdb.d
+
+  # Optional read replica placeholder (for demo use primary port again)
+  sql-read:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=Your_password123
+    ports: ["1434:1433"]
+
+  api:
+    build: ./src/Api
+    environment:
+      - ASPNETCORE_URLS=http://+:8080
+    depends_on: [sql-primary, redis]
+    ports: ["8080:8080"]
+    deploy:
+      replicas: 2 # avoid single point of failure
+
+  ingestor:
+    build: ./src/Ingestor
+    depends_on: [kafka, sql-primary]
+    deploy:
+      replicas: 2 # consumer group scaling
+
+  bankadapters:
+    build: ./src/BankAdapters
+    depends_on: [kafka]
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports: ["9090:9090"]
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    ports: ["3000:3000"]
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning
+  banka:
+    build:
+      context: .
+      dockerfile: src/BankA/Dockerfile
+    ports:
+      - "5001:8080"
+    environment:
+      - Kafka__BootstrapServers=kafka:9092
+      - Kafka__Topic=transactions
