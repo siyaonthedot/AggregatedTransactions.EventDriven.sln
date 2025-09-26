@@ -6,9 +6,10 @@ using OpenTelemetry.Trace;
 using Npgsql;
 using Application.Interfaces;
 using Infrastructure.Persistence;
-using Api.Infrastructure.Cache;
+using Infrastructure.Cache;
+using static Infrastructure.Persistence.TransactionsRepository;
+using Api.Infrastructure;
 using static Api.Infrastructure.Persistence.TransactionsRepository;
-using Api.Application.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 

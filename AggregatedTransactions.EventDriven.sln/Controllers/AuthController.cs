@@ -1,6 +1,5 @@
 ﻿using Aggregator.Api.Application.Interfaces;
 using Aggregator.Api.DTOs;
-
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
