@@ -1,15 +1,16 @@
 ﻿using Confluent.Kafka;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient;
+using Npgsql;
+
 
 [ApiController]
 [Route("api/[controller]")]
 public class HealthController : ControllerBase
 {
-    private readonly SqlConnection _conn;
+    private readonly NpgsqlConnection _conn;
     private readonly ConsumerConfig _kafkaConfig;
 
-    public HealthController(SqlConnection conn, ConsumerConfig kafkaConfig)
+    public HealthController(NpgsqlConnection conn, ConsumerConfig kafkaConfig)
     {
         _conn = conn;
         _kafkaConfig = kafkaConfig;

@@ -1,22 +1,19 @@
 ﻿using Confluent.Kafka;
 using Contracts.Events;
-using Dapper;
-using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+using Npgsql;
 using System.Text.Json;
 
 public class AggregatorWorker : BackgroundService
 {
     private readonly ILogger<AggregatorWorker> _logger;
     private readonly ConsumerConfig _config;
-    private readonly SqlConnection _conn;
+    private readonly NpgsqlConnection _conn;
     private readonly IConfiguration _configuration;
 
     public AggregatorWorker(
         ILogger<AggregatorWorker> logger,
         ConsumerConfig config,
-        SqlConnection conn,
+        NpgsqlConnection conn,
         IConfiguration configuration)
     {
         _logger = logger;
@@ -28,7 +25,7 @@ public class AggregatorWorker : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var consumer = new ConsumerBuilder<string, string>(_config).Build();
-        consumer.Subscribe(_configuration["Kafka:Topic"] ?? "transactions");
+        consumer.Subscribe(_configuration["Kafka:Topic"] ?? "transactions.created.v1");
 
         await _conn.OpenAsync(stoppingToken);
 
@@ -42,34 +39,32 @@ public class AggregatorWorker : BackgroundService
                 if (payload is null)
                     continue;
 
+                // ✅ Postgres UPSERT (ON CONFLICT DO UPDATE)
                 var sql = @"
-                    MERGE dbo.Transactions AS target
-                    USING (SELECT @TransactionId AS TransactionId) AS src
-                    ON target.TransactionId = src.TransactionId
-                    WHEN MATCHED THEN 
-                        UPDATE SET 
-                            CustomerId=@CustomerId,
-                            Bank=@Bank,
-                            PostedAtUtc=@PostedAtUtc,
-                            Category=@Category,
-                            Amount=@Amount,
-                            Currency=@Currency,
-                            Description=@Description
-                    WHEN NOT MATCHED THEN 
-                        INSERT (TransactionId, CustomerId, Bank, PostedAtUtc, Category, Amount, Currency, Description)
-                        VALUES (@TransactionId, @CustomerId, @Bank, @PostedAtUtc, @Category, @Amount, @Currency, @Description);";
+                    INSERT INTO transactions 
+                        (transaction_id, customer_id, bank, posted_at_utc, category, amount, currency, description)
+                    VALUES 
+                        (@transaction_id, @customer_id, @bank, @posted_at_utc, @category, @amount, @currency, @description)
+                    ON CONFLICT (transaction_id) DO UPDATE SET
+                        customer_id = EXCLUDED.customer_id,
+                        bank = EXCLUDED.bank,
+                        posted_at_utc = EXCLUDED.posted_at_utc,
+                        category = EXCLUDED.category,
+                        amount = EXCLUDED.amount,
+                        currency = EXCLUDED.currency,
+                        description = EXCLUDED.description;";
 
-                await _conn.ExecuteAsync(sql, new
-                {
-                    payload.TransactionId,
-                    payload.CustomerId,
-                    payload.Bank,
-                    payload.PostedAtUtc,
-                    payload.Category,
-                    payload.Amount,
-                    payload.Currency,
-                    payload.Description
-                });
+                await using var cmd = new NpgsqlCommand(sql, _conn);
+                cmd.Parameters.AddWithValue("@transaction_id", payload.TransactionId);
+                cmd.Parameters.AddWithValue("@customer_id", payload.CustomerId);
+                cmd.Parameters.AddWithValue("@bank", payload.Bank);
+                cmd.Parameters.AddWithValue("@posted_at_utc", payload.PostedAtUtc);
+                cmd.Parameters.AddWithValue("@category", payload.Category);
+                cmd.Parameters.AddWithValue("@amount", payload.Amount);
+                cmd.Parameters.AddWithValue("@currency", payload.Currency);
+                cmd.Parameters.AddWithValue("@description", payload.Description ?? (object)DBNull.Value);
+
+                await cmd.ExecuteNonQueryAsync(stoppingToken);
 
                 _logger.LogInformation("Transaction {TxId} upserted from {Bank}", payload.TransactionId, payload.Bank);
             }

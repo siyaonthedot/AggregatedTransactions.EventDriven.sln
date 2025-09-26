@@ -7,6 +7,7 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Api.Infrastructure;
+using Npgsql;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -27,9 +28,15 @@ builder.Services.AddSwaggerGen();
 var redisEndpoint = builder.Configuration["Redis:Endpoint"]!;
 builder.Services.AddSingleton<IConnectionMultiplexer>(sp => ConnectionMultiplexer.Connect(redisEndpoint));
 
-// DB connections (read/write split)
+//DB connections(read/write split)
 builder.Services.AddSingleton(sp => new SqlConnection(builder.Configuration.GetConnectionString("WriteDb")));
 builder.Services.AddSingleton(sp => new SqlConnection(builder.Configuration.GetConnectionString("ReadDb")));
+
+// Postgres
+builder.Services.AddScoped<NpgsqlConnection>(_ => new NpgsqlConnection(builder.Configuration.GetConnectionString("ReadDb")));
+builder.Services.AddScoped<NpgsqlConnection>(_ => new NpgsqlConnection(builder.Configuration.GetConnectionString("WriteDb")));
+
+
 
 builder.Services.AddSingleton<ITransactionsRepository, TransactionsRepository>();
 builder.Services.AddSingleton<ICache, RedisCache>();

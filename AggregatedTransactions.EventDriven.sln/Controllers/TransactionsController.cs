@@ -40,8 +40,7 @@ namespace Api.Controllers
             pageNumber = Math.Max(pageNumber, 1);
 
             var cacheKey = $"tx:{customerId}:{from?.ToString("yyyyMMdd")}:{to?.ToString("yyyyMMdd")}:{category}:{pageNumber}:{pageSize}";
-            var cached = await _cache.TryGetAsync<PagedResponse<TransactionDto>>(cacheKey);
-            if (cached is not null)
+            if (await _cache.TryGetAsync<PagedResponse<TransactionDto>>(cacheKey) is { } cached)
                 return Ok(cached);
 
             var (items, total) = await _repo.QueryTransactionsAsync(customerId, from, to, category, pageNumber, pageSize, ct);

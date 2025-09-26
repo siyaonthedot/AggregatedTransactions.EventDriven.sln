@@ -1,11 +1,21 @@
 using Confluent.Kafka;
-using Microsoft.Data.SqlClient;
+using NLog;
+using NLog.Web;
+using Npgsql;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-//using OpenTelemetry.Instrumentation.Runtime; // Added namespace for runtime instrumentation  
+using Polly;
 
-var builder = WebApplication.CreateBuilder(args);
+
+var logger = LogManager.Setup()
+    .LoadConfigurationFromAppSettings()
+    .GetCurrentClassLogger();
+
+try
+{
+    logger.Info("Starting Aggregator service...");
+    var builder = WebApplication.CreateBuilder(args);
 
 // OpenTelemetry configuration  
 builder.Services.AddOpenTelemetry()
@@ -36,12 +46,19 @@ builder.Services.AddSingleton(sp =>
     };
 });
 
-// SQL connection factory  
-builder.Services.AddSingleton(sp =>
-   new SqlConnection(builder.Configuration.GetConnectionString("WriteDb")));
+builder.Services.AddSingleton<NpgsqlConnection>(sp =>
+{
+    var connString = builder.Configuration.GetConnectionString("WriteDb")
+        ?? "Host=postgres;Port=5432;Database=transactionsdb;Username=postgres;Password=postgres";
+    return new NpgsqlConnection(connString);
+});
 
-// Register background worker  
-builder.Services.AddHostedService<AggregatorWorker>();
+    var retryPolicy = Policy
+    .Handle<NpgsqlException>()
+    .WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(5));;
+
+    builder.Services.AddHostedService<AggregatorWorker>();
+
 
 var app = builder.Build();
 
@@ -49,3 +66,13 @@ app.MapControllers();
 //app.MapPrometheusScrapingEndpoint();
 
 app.Run();
+}
+catch (Exception ex)
+{
+    logger.Error(ex, "Application stopped due to exception");
+    throw;
+}
+finally
+{
+    LogManager.Shutdown();
+}

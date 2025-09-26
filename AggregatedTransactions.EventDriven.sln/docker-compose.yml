@@ -48,16 +48,6 @@ services:
     deploy:
       replicas: 2 # avoid single point of failure
 
-  ingestor:
-    build: ./src/Ingestor
-    depends_on: [kafka, sql-primary]
-    deploy:
-      replicas: 2 # consumer group scaling
-
-  bankadapters:
-    build: ./src/BankAdapters
-    depends_on: [kafka]
-
   prometheus:
     image: prom/prometheus:latest
     volumes:
@@ -71,12 +61,4 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
       - ./observability/grafana/provisioning:/etc/grafana/provisioning
-  banka:
-    build:
-      context: .
-      dockerfile: src/BankA/Dockerfile
-    ports:
-      - "5001:8080"
-    environment:
-      - Kafka__BootstrapServers=kafka:9092
-      - Kafka__Topic=transactions
+

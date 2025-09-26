@@ -1,23 +1,109 @@
-﻿version: '3.9'
+﻿name: aggregated-transactions
 
 services:
-  banka:
-    build:
-      context: .
-      dockerfile: src/BankA/Dockerfile
-    container_name: banka-service
-    ports:
-      - "5001:8080"   # Expose Swagger on host at http://localhost:5001/swagger
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    container_name: zookeeper
     environment:
-      - DOTNET_RUNNING_IN_CONTAINER=true
-      - Kafka__BootstrapServers=kafka:9092
-      - Kafka__Topic=transactions
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"   # for containers
+      - "29092:29092" # for host apps (VS, Postman, etc.)
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
     depends_on:
       - kafka
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: transactionsdb
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/swagger/index.html"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d transactionsdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d
+
+  banka-api:
+    build:
+      context: .
+      dockerfile: src/BankA.API/Dockerfile
+    container_name: banka-api
+    ports:
+      - "5001:80"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Kafka__BootstrapServers: kafka:9092
+      Kafka__Topic: transactions
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  aggregator:
+    build:
+      context: .
+      dockerfile: src/Aggregator/Dockerfile
+    container_name: aggregator-service
+    ports:
+      - "8081:8080"
+    environment:
+      DOTNET_RUNNING_IN_CONTAINER: "true"
+      ConnectionStrings__WriteDb: "Host=postgres;Port=5432;Database=transactionsdb;Username=postgres;Password=postgres"
+      Kafka__BootstrapServers: "kafka:9092"
+      Kafka__GroupId: "aggregator-service"
+      Kafka__Topic: "transactions"
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 15s
+      start_period: 20s
     restart: always
+
+volumes:
+  postgres_data:

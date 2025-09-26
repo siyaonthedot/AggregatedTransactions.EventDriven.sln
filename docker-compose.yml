@@ -1,6 +1,6 @@
 services:
-  banka.api:
-    image: ${DOCKER_REGISTRY-}bankaapi
+  aggregator:
+    image: ${DOCKER_REGISTRY-}aggregator
     build:
       context: .
-      dockerfile: BankA.API/Dockerfile
+      dockerfile: Aggregator/Dockerfile

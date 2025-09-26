@@ -13,7 +13,6 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["Aggregator/Aggregator.csproj", "Aggregator/"]
-COPY ["Contracts/Contracts.csproj", "Contracts/"]
 RUN dotnet restore "./Aggregator/Aggregator.csproj"
 COPY . .
 WORKDIR "/src/Aggregator"
