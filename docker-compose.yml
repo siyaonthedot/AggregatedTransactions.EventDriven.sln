@@ -18,15 +18,15 @@ services:
 
   aggregator-worker:
     build:
-      context: ./Aggregator
+      context: ./src/Aggregator
       dockerfile: Dockerfile
     container_name: aggregator-worker
 
-  banka-api:
-    build:
-      context: ./BankA.Api
-      dockerfile: Dockerfile
-    container_name: banka-api
+  # banka-api:
+  #   build:
+  #     context: ./src/BankA.Api
+  #     dockerfile: Dockerfile
+  #   container_name: banka-api
 
   postgres:
     image: postgres:16

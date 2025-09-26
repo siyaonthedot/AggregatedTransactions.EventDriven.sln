@@ -1,12 +1,10 @@
-﻿services:
-  bankbapi:
-    image: myregistry/banka-api:latest
-    container_name: banka-api
-    restart: always
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - Kafka__BootstrapServers=kafka:9092
-    ports:
-      - "5002:8080"
-    depends_on:
-      - kafka
+﻿
+services:    
+ bankb-api:
+  build:
+    context: ./src/BankB.Api
+    dockerfile: Dockerfile
+  container_name: bankb-api
+  ports:
+    - "5001:80"
+

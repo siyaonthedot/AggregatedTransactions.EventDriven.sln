@@ -4,10 +4,11 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Npgsql;
-using Api.Application.Interfaces;
-using Api.Infrastructure.Persistence;
+using Application.Interfaces;
+using Infrastructure.Persistence;
 using Api.Infrastructure.Cache;
 using static Api.Infrastructure.Persistence.TransactionsRepository;
+using Api.Application.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,6 +27,10 @@ builder.Services.AddSwaggerGen();
 // Redis
 var redisEndpoint = builder.Configuration["Redis:Endpoint"]!;
 builder.Services.AddSingleton<IConnectionMultiplexer>(sp => ConnectionMultiplexer.Connect(redisEndpoint));
+
+builder.Services.AddScoped<ITransactionsRepository>(sp =>
+    new TransactionsRepository(builder.Configuration.GetConnectionString("DefaultConnection")!));
+
 
 //DB connections(read/write split)
 builder.Services.AddSingleton(sp => new SqlConnection(builder.Configuration.GetConnectionString("WriteDb")));
