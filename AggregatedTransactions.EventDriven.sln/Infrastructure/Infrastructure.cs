@@ -3,6 +3,7 @@ using Contracts.Dtos;
 using Dapper;
 using Microsoft.Data.SqlClient;
 using StackExchange.Redis;
+using Npgsql 
 using System.Text.Json;
 
 namespace Api.Infrastructure

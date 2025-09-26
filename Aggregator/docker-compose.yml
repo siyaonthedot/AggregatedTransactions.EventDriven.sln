@@ -38,6 +38,7 @@
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: transactionsdb
+
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d transactionsdb"]
       interval: 10s
@@ -51,10 +52,13 @@
   # Aggregator Service
   # ----------------------
   aggregator:
-    build: ./src/Aggregator
+    build: .
     environment:
       - ASPNETCORE_URLS=http://+:8091
       - DOTNET_ENVIRONMENT=Docker
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=aggregator;Username=postgres;Password=postgres
+      - Kafka__BootstrapServers=kafka:9092
     depends_on:
       - kafka
       - postgres

@@ -1,14 +1,13 @@
-using Contracts.Dtos;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
-using Dapper;
 using StackExchange.Redis;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-using Api.Infrastructure;
 using Npgsql;
-
+using Api.Application.Interfaces;
+using Api.Infrastructure.Persistence;
+using Api.Infrastructure.Cache;
+using static Api.Infrastructure.Persistence.TransactionsRepository;
 
 var builder = WebApplication.CreateBuilder(args);
 

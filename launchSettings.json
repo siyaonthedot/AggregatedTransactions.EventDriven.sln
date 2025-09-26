@@ -5,7 +5,8 @@
       "commandVersion": "1.0",
       "serviceActions": {
         "banka.api": "StartDebugging",
-        "aggregator": "StartDebugging"
+        "aggregator": "StartDebugging",
+        "applicationUrl": "http://localhost:5000"
       }
     }
   }

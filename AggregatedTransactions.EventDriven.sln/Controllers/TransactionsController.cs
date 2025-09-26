@@ -1,9 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics.Contracts;
+using Api.Infrastructure.Cache;
 using Contracts.Dtos;
 
 namespace Api.Controllers
 {
+    using Api.Application.Interfaces;
     using Api.Infrastructure;
     using Contracts.Dtos;
     using Microsoft.AspNetCore.Mvc;

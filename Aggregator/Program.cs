@@ -17,8 +17,15 @@ try
     logger.Info("Starting Aggregator service...");
     var builder = WebApplication.CreateBuilder(args);
 
-// OpenTelemetry configuration  
-builder.Services.AddOpenTelemetry()
+    builder.WebHost.ConfigureKestrel(options =>
+    {
+        options.ListenAnyIP(8091); // HTTP only
+                                   // Remove HTTPS endpoint
+    });
+
+
+    // OpenTelemetry configuration  
+    builder.Services.AddOpenTelemetry()
    .ConfigureResource(r => r.AddService("AggregatedTransactions.Aggregator"))
    .WithMetrics(m => m
        .AddAspNetCoreInstrumentation()

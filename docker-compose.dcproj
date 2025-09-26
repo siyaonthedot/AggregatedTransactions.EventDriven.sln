@@ -3,8 +3,7 @@
   <PropertyGroup Label="Globals">
     <ProjectVersion>2.1</ProjectVersion>
     <DockerTargetOS>Linux</DockerTargetOS>
-    <DockerPublishLocally>False</DockerPublishLocally>
-    <ProjectGuid>8fed44f5-846d-46c4-8a29-f308c3a019d5</ProjectGuid>
+    <ProjectGuid>69ae1279-2ee5-4832-ba45-ebf882c7ca1c</ProjectGuid>
     <DockerLaunchAction>LaunchBrowser</DockerLaunchAction>
     <DockerServiceUrl>{Scheme}://localhost:{ServicePort}/swagger</DockerServiceUrl>
     <DockerServiceName>aggregator</DockerServiceName>

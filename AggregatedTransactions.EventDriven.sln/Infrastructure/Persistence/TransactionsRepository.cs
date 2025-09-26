@@ -7,6 +7,8 @@ namespace Api.Infrastructure.Persistence;
 
 public class TransactionsRepository : ITransactionsRepository
 {
+    public record ApiKeyOptions(string HeaderName, string ApiKey);
+
     private readonly IConfiguration _config;
     public TransactionsRepository(IConfiguration config) { _config = config; }
 
